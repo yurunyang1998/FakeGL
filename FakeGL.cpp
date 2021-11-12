@@ -156,6 +156,9 @@ void FakeGL::TexCoord2f(float u, float v)
 // sets the vertex & launches it down the pipeline
 void FakeGL::Vertex3f(float x, float y, float z)
     { // Vertex3f()
+        vertexWithAttributes vertex(x,y,z);
+        this->vertexQueue.push_back(vertex);
+        TransformVertex();
     } // Vertex3f()
 
 //-------------------------------------------------//
@@ -243,6 +246,15 @@ void FakeGL::ClearColor(float red, float green, float blue, float alpha)
 // transform one vertex & shift to the raster queue
 void FakeGL::TransformVertex()
     { // TransformVertex()
+        auto vertex = this->vertexQueue.front();
+        vertexQueue.pop_front();
+
+        // implement matrix
+        screenVertexWithAttributes  screenVertex(vertex.position.x , vertex.position.y, vertex.position.z);
+        this->rasterQueue.push_back(screenVertex);
+
+        RasterisePoint(screenVertex);
+
     } // TransformVertex()
 
 // rasterise a single primitive if there are enough vertices on the queue
@@ -254,7 +266,16 @@ bool FakeGL::RasterisePrimitive()
 // rasterises a single point
 void FakeGL::RasterisePoint(screenVertexWithAttributes &vertex0)
     { // RasterisePoint()
-        std::cout<<vertex0.position.x<<std::endl;
+        std::cout<<"rasterise"<<std::endl;
+        int x = vertex0.position.x;
+        int y = vertex0.position.y;
+        for(int i=0;i<10;i++){
+            this->frameBuffer[x+i][y+i].red = 1;
+            this->frameBuffer[x+i][y+i].blue = 1;
+            this->frameBuffer[x+i][y+i].green= 1;
+        }
+
+
 
     } // RasterisePoint()
 

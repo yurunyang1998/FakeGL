@@ -73,6 +73,10 @@ class vertexWithAttributes
 
 	// you may need to add more state here
 
+    vertexWithAttributes(float x, float y, float z){
+        position = Homogeneous4(x,y,z);
+    }
+
     }; // class vertexWithAttributes
 
 // class for a vertex after transformation to screen space
@@ -85,7 +89,9 @@ class screenVertexWithAttributes
     RGBAValue colour;
 
 	// you may need to add more state here
-
+    screenVertexWithAttributes(float x, float y, float z){
+        position = Cartesian3(x,y,z);
+    }
     }; // class screenVertexWithAttributes
 
 // class for a fragment with attributes
