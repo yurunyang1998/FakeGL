@@ -45,21 +45,27 @@ FakeGL::~FakeGL()
 // starts a sequence of geometric primitives
 void FakeGL::Begin(unsigned int PrimitiveType)
     { // Begin()
+
+       this->currentPrimitive = PrimitiveType;
+
     } // Begin()
 
 // ends a sequence of geometric primitives
 void FakeGL::End()
     { // End()
+        this->currentPrimitive = -1;
     } // End()
 
 // sets the size of a point for drawing
 void FakeGL::PointSize(float size)
     { // PointSize()
+        this->pointSize = size;
     } // PointSize()
 
 // sets the width of a line for drawing purposes
 void FakeGL::LineWidth(float width)
     { // LineWidth()
+        this->lineWidth = width;
     } // LineWidth()
 
 //-------------------------------------------------//
@@ -250,17 +256,64 @@ void FakeGL::TransformVertex()
         vertexQueue.pop_front();
 
         // implement matrix
+
+
         screenVertexWithAttributes  screenVertex(vertex.position.x , vertex.position.y, vertex.position.z);
         this->rasterQueue.push_back(screenVertex);
 
-        RasterisePoint(screenVertex);
+        RasterisePrimitive();
 
     } // TransformVertex()
 
 // rasterise a single primitive if there are enough vertices on the queue
 bool FakeGL::RasterisePrimitive()
     { // RasterisePrimitive()
-        return true;
+    switch (this->currentPrimitive) {
+        case 0:{ //rasterise a vertex
+            if(this->rasterQueue.size()>=1){
+                std::cout<<"rasterise point"<<std::endl;
+                auto vertex = rasterQueue.front();
+                rasterQueue.pop_front();
+                //screenVertexWithAttributes rasterVertex(vertex.position.x, vertex.position.y, vertex.position.z);
+                RasterisePoint(vertex);
+                return true;
+            }else
+                return false;
+        }
+        case 1:{  //rasterise a line
+            if(this->rasterQueue.size()>=2){
+
+                std::cout<<"rasterise line"<<std::endl;
+                auto vertex1 = rasterQueue.front();rasterQueue.pop_front();
+                auto vertex2 = rasterQueue.front();rasterQueue.pop_front();
+//                screenVertexWithAttributes rasterVertex1(vertex1.position.x, vertex1.position.y, vertex1.position.z);
+//                screenVertexWithAttributes rasterVertex2(vertex2.position.x, vertex2.position.y, vertex2.position.z);
+
+                this->RasteriseLineSegment(vertex1, vertex2);
+                return true;
+            }else
+                return false;
+        }
+        case 2:{     // rasterise a triangle
+
+            std::cout<<"render triangle"<<std::endl;
+
+            if(this->rasterQueue.size()>=3){
+                auto vertex1 = rasterQueue.front();rasterQueue.pop_front();
+                auto vertex2 = rasterQueue.front();rasterQueue.pop_front();
+                auto vertex3 = rasterQueue.front();rasterQueue.pop_front();
+                screenVertexWithAttributes rasterVertex1(vertex1.position.x*100, vertex1.position.y*100, vertex1.position.z*100);
+                screenVertexWithAttributes rasterVertex2(vertex2.position.x*100, vertex2.position.y*100, vertex2.position.z*100);
+                screenVertexWithAttributes rasterVertex3(vertex3.position.x*100, vertex3.position.y*100, vertex3.position.z*100);
+
+
+                RasteriseTriangle(rasterVertex1, rasterVertex2, rasterVertex3);
+                return true;
+            }else
+                return false;
+        }
+      }
+    return false;   //can't rasterise a primitive;
     } // RasterisePrimitive()
 
 // rasterises a single point
@@ -269,11 +322,28 @@ void FakeGL::RasterisePoint(screenVertexWithAttributes &vertex0)
         std::cout<<"rasterise"<<std::endl;
         int x = vertex0.position.x;
         int y = vertex0.position.y;
-        for(int i=0;i<10;i++){
-            this->frameBuffer[x+i][y+i].red = 1;
-            this->frameBuffer[x+i][y+i].blue = 1;
-            this->frameBuffer[x+i][y+i].green= 1;
+        int z = vertex0.position.z;
+        int pointSize = this->pointSize;
+        if(pointSize==0){
+            std::cout<<"pointsize is zero"<<std::endl;
+            return;
         }
+
+        for(int _x=x-(pointSize/2);_x<=x+(pointSize/2);_x++){
+            for(int _y=y-(pointSize/2);_y<=y+(pointSize/2);_y++){
+
+                //TODO: implement depth test
+
+                fragmentWithAttributes shaderVertex(_x,_y,vertex0.colour);
+                this->fragmentQueue.push_back(shaderVertex);
+
+            }
+        }
+
+        ProcessFragment();
+
+
+
 
 
 
@@ -282,6 +352,48 @@ void FakeGL::RasterisePoint(screenVertexWithAttributes &vertex0)
 // rasterises a single line segment
 void FakeGL::RasteriseLineSegment(screenVertexWithAttributes &vertex0, screenVertexWithAttributes &vertex1)
     { // RasteriseLineSegment()
+
+       int x0 = vertex0.position.x, y0 = vertex0.position.y;
+       int x1 = vertex1.position.x, y1 = vertex1.position.y;
+
+       std::cout<<x0<<" "<<y0<<std::endl;
+       std::cout<<x1<<" "<<y1<<std::endl;
+       bool steep = false;
+           if (std::abs(x0-x1)<std::abs(y0-y1)) {
+               std::swap(x0, y0);
+               std::swap(x1, y1);
+               steep = true;
+           }
+           if (x0>x1) {
+               std::swap(x0, x1);
+               std::swap(y0, y1);
+           }
+           int dx = x1-x0;
+           int dy = y1-y0;
+           int derror2 = std::abs(dy)*2;
+           int error2 = 0;
+           int y = y0;
+           for (int x=x0; x<=x1; x++) {
+               if (steep) {
+                   fragmentWithAttributes fragmentVertex(x, y, vertex0.colour);
+                   this->fragmentQueue.push_back(fragmentVertex);
+               } else {
+                   fragmentWithAttributes fragmentVertex(y, x, vertex0.colour);
+                   this->fragmentQueue.push_back(fragmentVertex);
+               }
+               error2 += derror2;
+               if (error2 > dx) {
+                   y += (y1>y0?1:-1);
+                   error2 -= dx*2;
+               }
+           }
+
+
+
+
+            ProcessFragment();
+
+
     } // RasteriseLineSegment()
 
 // rasterises a single triangle
@@ -368,13 +480,27 @@ void FakeGL::RasteriseTriangle(screenVertexWithAttributes &vertex0, screenVertex
 
             // now we add it to the queue for fragment processing
             fragmentQueue.push_back(rasterFragment);
+            std::cout<<rasterFragment.row<<" "<<rasterFragment.col<<std::endl;
             } // per pixel
         } // per row
+    ProcessFragment();
     } // RasteriseTriangle()
 
 // process a single fragment
 void FakeGL::ProcessFragment()
     { // ProcessFragment()
+        while(!this->fragmentQueue.empty()){
+            auto fragment = this->fragmentQueue.front();
+            this->fragmentQueue.pop_front();
+
+            int x = fragment.col;
+            int y = fragment.row;
+            this->frameBuffer[x][y] = fragment.colour;
+
+        }
+
+
+
     } // ProcessFragment()
 
 // standard routine for dumping the entire FakeGL context (except for texture / image)

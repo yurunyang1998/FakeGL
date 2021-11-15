@@ -104,7 +104,13 @@ class fragmentWithAttributes
     RGBAValue colour;
 
 	// you may need to add more state here
+    fragmentWithAttributes(){};
 
+    fragmentWithAttributes(float x, float y, RGBAValue color_){
+        row = x;
+        col = y;
+        colour = color_;
+    }
     }; // class fragmentWithAttributes
 
 // the class storing the FakeGL context
@@ -120,6 +126,9 @@ class FakeGL
     // ATTRIBUTE STATE
     //-----------------------------
     RGBAValue backGroundColor;
+    float lineWidth=1;
+    float pointSize=1;
+    unsigned int currentPrimitive;
 
     //-----------------------------
     // OUTPUT FROM INPUT STAGE

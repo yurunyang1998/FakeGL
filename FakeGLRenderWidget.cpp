@@ -202,12 +202,12 @@ void FakeGLRenderWidget::paintFakeGL()
         // X axis is red
         fakeGL.Color3f(1.0, 0.0, 0.0);
         fakeGL.Vertex3f(0.0, 0.0, 0.0);
-        fakeGL.Vertex3f(1.0, 0.0, 0.0);
+        fakeGL.Vertex3f(100.0, 0.0, 0.0);
 
         // Y axis is green
         fakeGL.Color3f(0.0, 1.0, 0.0);
         fakeGL.Vertex3f(0.0, 0.0, 0.0);
-        fakeGL.Vertex3f(0.0, 1.0, 0.0);
+        fakeGL.Vertex3f(0.0, 100.0, 0.0);
 
         // Z axis is blue
         fakeGL.Color3f(0.0, 0.0, 1.0);
