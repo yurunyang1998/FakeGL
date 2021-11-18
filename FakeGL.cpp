@@ -27,7 +27,7 @@
 FakeGL::FakeGL()
     { // constructor
         std::cout<<"construct FakeGL"<<std::endl;
-
+        this->cameraMat.SetIdentity();
 
     } // constructor
 
@@ -77,6 +77,15 @@ void FakeGL::LineWidth(float width)
 // set the matrix mode (i.e. which one we change)   
 void FakeGL::MatrixMode(unsigned int whichMatrix)
     { // MatrixMode()
+        if(whichMatrix==FAKEGL_MODELVIEW){
+            this->worldMat.SetZero();
+            this->worldMat[0][0]=20;
+            this->worldMat[0][3]=20;
+            this->worldMat[1][1]=20;
+            this->worldMat[1][3]=20;
+            this->worldMat[2][2]=20;
+            this->worldMat[2][3]=20;
+        }
     } // MatrixMode()
 
 // pushes a matrix on the stack
@@ -122,6 +131,17 @@ void FakeGL::Scalef(float xScale, float yScale, float zScale)
 // translate the matrix
 void FakeGL::Translatef(float xTranslate, float yTranslate, float zTranslate)
     { // Translatef()
+        this->cameraMat.SetZero();
+        this->cameraMat[0][0] = 1;
+        this->cameraMat[0][3] = xTranslate*10;
+
+        this->cameraMat[1][1] = 1;
+        this->cameraMat[1][3] = yTranslate*10;
+
+        this->cameraMat[2][2] = 1;
+        this->cameraMat[2][3] = -zTranslate*10;
+
+        std::cout<<cameraMat[0][3]<<" "<<cameraMat[1][3]<<" "<<cameraMat[2][3]<<std::endl;
     } // Translatef()
 
 // sets the viewport
@@ -256,9 +276,18 @@ void FakeGL::TransformVertex()
         vertexQueue.pop_front();
 
         // implement matrix
+        Homogeneous4 hg4(vertex.position.x, vertex.position.y, vertex.position.z);
+        auto worldCoord = this->worldMat*hg4;
+        worldCoord.w = 1;
+        auto cameraCoord = this->cameraMat*worldCoord;
 
 
-        screenVertexWithAttributes  screenVertex(vertex.position.x , vertex.position.y, vertex.position.z);
+
+
+        screenVertexWithAttributes  screenVertex(cameraCoord.x,cameraCoord.y, cameraCoord.z);
+        screenVertex.colour.red = 123;
+        screenVertex.colour.blue= 132;
+        screenVertex.colour.green =213;
         this->rasterQueue.push_back(screenVertex);
 
         RasterisePrimitive();
@@ -271,7 +300,7 @@ bool FakeGL::RasterisePrimitive()
     switch (this->currentPrimitive) {
         case 0:{ //rasterise a vertex
             if(this->rasterQueue.size()>=1){
-                std::cout<<"rasterise point"<<std::endl;
+//                std::cout<<"rasterise point"<<std::endl;
                 auto vertex = rasterQueue.front();
                 rasterQueue.pop_front();
                 //screenVertexWithAttributes rasterVertex(vertex.position.x, vertex.position.y, vertex.position.z);
@@ -296,18 +325,18 @@ bool FakeGL::RasterisePrimitive()
         }
         case 2:{     // rasterise a triangle
 
-            std::cout<<"render triangle"<<std::endl;
+//            std::cout<<"render triangle"<<std::endl;
 
             if(this->rasterQueue.size()>=3){
                 auto vertex1 = rasterQueue.front();rasterQueue.pop_front();
                 auto vertex2 = rasterQueue.front();rasterQueue.pop_front();
                 auto vertex3 = rasterQueue.front();rasterQueue.pop_front();
-                screenVertexWithAttributes rasterVertex1(vertex1.position.x*100, vertex1.position.y*100, vertex1.position.z*100);
-                screenVertexWithAttributes rasterVertex2(vertex2.position.x*100, vertex2.position.y*100, vertex2.position.z*100);
-                screenVertexWithAttributes rasterVertex3(vertex3.position.x*100, vertex3.position.y*100, vertex3.position.z*100);
+//                screenVertexWithAttributes rasterVertex1(vertex1.position.x*100, vertex1.position.y*100, vertex1.position.z*100);
+//                screenVertexWithAttributes rasterVertex2(vertex2.position.x*100, vertex2.position.y*100, vertex2.position.z*100);
+//                screenVertexWithAttributes rasterVertex3(vertex3.position.x*100, vertex3.position.y*100, vertex3.position.z*100);
 
 
-                RasteriseTriangle(rasterVertex1, rasterVertex2, rasterVertex3);
+                RasteriseTriangle(vertex1, vertex2, vertex3);
                 return true;
             }else
                 return false;
@@ -476,11 +505,10 @@ void FakeGL::RasteriseTriangle(screenVertexWithAttributes &vertex0, screenVertex
                 continue;
 
             // compute colour
-            rasterFragment.colour = alpha * vertex0.colour + beta * vertex1.colour + gamma * vertex2.colour; 
-
+            rasterFragment.colour = alpha * vertex0.colour + beta * vertex1.colour + gamma * vertex2.colour;
             // now we add it to the queue for fragment processing
             fragmentQueue.push_back(rasterFragment);
-            std::cout<<rasterFragment.row<<" "<<rasterFragment.col<<std::endl;
+//            std::cout<<rasterFragment.row<<" "<<rasterFragment.col<<std::endl;
             } // per pixel
         } // per row
     ProcessFragment();

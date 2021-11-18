@@ -129,7 +129,8 @@ class FakeGL
     float lineWidth=1;
     float pointSize=1;
     unsigned int currentPrimitive;
-
+    Matrix4 worldMat;
+    Matrix4 cameraMat;
     //-----------------------------
     // OUTPUT FROM INPUT STAGE
     // INPUT TO TRANSFORM STAGE

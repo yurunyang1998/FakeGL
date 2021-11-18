@@ -262,7 +262,7 @@ void FakeGLRenderWidget::mouseMoveEvent(QMouseEvent *event)
     // scale both coordinates from that
     float x = (2.0 * event->x() - size) / size;
     float y = (size - 2.0 * event->y() ) / size;
-    
+    std::cout<<x<<" "<<y<<std::endl;
     // send signal to the controller for detailed processing
     emit ContinueScaledDrag(x,y);
     } // FakeGLRenderWidget::mouseMoveEvent()
