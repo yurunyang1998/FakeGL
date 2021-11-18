@@ -32,8 +32,11 @@
 int main(int argc, char **argv)
     { // main()
     // initialize QT
-    QApplication renderApp(argc, argv);
 
+
+
+
+    QApplication renderApp(argc, argv);
     // check the args to make sure there's an input file
     if (argc != 3) 
         { // bad arg count

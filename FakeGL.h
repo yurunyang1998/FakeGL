@@ -24,6 +24,7 @@
 #include "RGBAImage.h"
 #include <vector>
 #include <deque>
+#include <stack>
 
 // we will store all of the FakeGL context in a class object
 // this is similar to the real OpenGL which handles multiple windows
@@ -129,8 +130,10 @@ class FakeGL
     float lineWidth=1;
     float pointSize=1;
     unsigned int currentPrimitive;
-    Matrix4 worldMat;
-    Matrix4 cameraMat;
+    unsigned int currentMatMode=-1;
+    Matrix4 modelViewMat;
+    Matrix4 projectionMat;
+    std::stack<Matrix4> matStack;
     //-----------------------------
     // OUTPUT FROM INPUT STAGE
     // INPUT TO TRANSFORM STAGE

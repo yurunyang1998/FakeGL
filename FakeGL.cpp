@@ -27,7 +27,7 @@
 FakeGL::FakeGL()
     { // constructor
         std::cout<<"construct FakeGL"<<std::endl;
-        this->cameraMat.SetIdentity();
+
 
     } // constructor
 
@@ -77,35 +77,59 @@ void FakeGL::LineWidth(float width)
 // set the matrix mode (i.e. which one we change)   
 void FakeGL::MatrixMode(unsigned int whichMatrix)
     { // MatrixMode()
-        if(whichMatrix==FAKEGL_MODELVIEW){
-            this->worldMat.SetZero();
-            this->worldMat[0][0]=20;
-            this->worldMat[0][3]=20;
-            this->worldMat[1][1]=20;
-            this->worldMat[1][3]=20;
-            this->worldMat[2][2]=20;
-            this->worldMat[2][3]=20;
-        }
+        this->currentMatMode = whichMatrix;
     } // MatrixMode()
 
 // pushes a matrix on the stack
 void FakeGL::PushMatrix()
     { // PushMatrix()
+        if(this->currentMatMode==FAKEGL_MODELVIEW){
+            this->matStack.push(this->modelViewMat);
+        }else if(this->currentMatMode == FAKEGL_PROJECTION){
+            this->matStack.push(this->projectionMat);
+        }
     } // PushMatrix()
 
 // pops a matrix off the stack
 void FakeGL::PopMatrix()
     { // PopMatrix()
+        if(this->currentMatMode==FAKEGL_MODELVIEW){
+            this->modelViewMat = this->matStack.top();
+            this->matStack.pop();
+        }else if(this->currentMatMode == FAKEGL_PROJECTION){
+            this->projectionMat = this->matStack.top();
+            this->matStack.pop();
+        }
     } // PopMatrix()
 
 // load the identity matrix
 void FakeGL::LoadIdentity()
     { // LoadIdentity()
+        if(this->currentMatMode==FAKEGL_MODELVIEW){
+            this->modelViewMat.SetIdentity();
+            this->matStack.pop();
+        }else if(this->currentMatMode == FAKEGL_PROJECTION){
+            this->projectionMat.SetIdentity();
+        }
     } // LoadIdentity()
 
 // multiply by a known matrix in column-major format
 void FakeGL::MultMatrixf(const float *columnMajorCoordinates)
     { // MultMatrixf()
+    Matrix4 mat;
+    for(int i=0;i<16;i++){
+        int x = i%4;
+        int y = i/4;
+        mat[x][y] = columnMajorCoordinates[i];
+    }
+    if(this->currentMatMode==FAKEGL_MODELVIEW){
+        this->modelViewMat = this->modelViewMat*mat;
+    }else if(this->currentMatMode == FAKEGL_PROJECTION){
+        this->projectionMat = this->projectionMat*mat;
+    }
+
+
+
     } // MultMatrixf()
 
 // sets up a perspective projection matrix
@@ -121,32 +145,50 @@ void FakeGL::Ortho(float left, float right, float bottom, float top, float zNear
 // rotate the matrix
 void FakeGL::Rotatef(float angle, float axisX, float axisY, float axisZ)
     { // Rotatef()
+        std::cout<<"rotation mat"<<std::endl;
+        Matrix4 rotationMat;
+        rotationMat.SetRotation(Cartesian3(axisX, axisY, axisZ), angle);
+        if(this->currentMatMode==FAKEGL_MODELVIEW){
+            this->modelViewMat =  rotationMat * this->modelViewMat;
+        }else if(this->currentMatMode == FAKEGL_PROJECTION){
+            this->projectionMat =  rotationMat * this->projectionMat;
+        }
+
     } // Rotatef()
 
 // scale the matrix
 void FakeGL::Scalef(float xScale, float yScale, float zScale)
     { // Scalef()
+        std::cout<<"scalef"<<std::endl;
+        Matrix4 scaleMat;
+        scaleMat.SetScale(xScale, yScale, zScale);
+        if(this->currentMatMode==FAKEGL_MODELVIEW){
+            this->modelViewMat =  scaleMat * this->modelViewMat;
+        }else if(this->currentMatMode == FAKEGL_PROJECTION){
+            this->projectionMat =  scaleMat * this->projectionMat;
+        }
+
+
     } // Scalef()
 
 // translate the matrix
 void FakeGL::Translatef(float xTranslate, float yTranslate, float zTranslate)
     { // Translatef()
-        this->cameraMat.SetZero();
-        this->cameraMat[0][0] = 1;
-        this->cameraMat[0][3] = xTranslate*10;
-
-        this->cameraMat[1][1] = 1;
-        this->cameraMat[1][3] = yTranslate*10;
-
-        this->cameraMat[2][2] = 1;
-        this->cameraMat[2][3] = -zTranslate*10;
-
-        std::cout<<cameraMat[0][3]<<" "<<cameraMat[1][3]<<" "<<cameraMat[2][3]<<std::endl;
+    std::cout<<"translatef"<<std::endl;
+    Matrix4 translateMat;
+    translateMat.SetTranslation(Cartesian3(xTranslate, yTranslate, zTranslate));
+    if(this->currentMatMode==FAKEGL_MODELVIEW){
+        this->modelViewMat =  translateMat * this->modelViewMat;
+    }else if(this->currentMatMode == FAKEGL_PROJECTION){
+        this->projectionMat =  translateMat * this->projectionMat;
+    }
     } // Translatef()
 
 // sets the viewport
 void FakeGL::Viewport(int x, int y, int width, int height)
     { // Viewport()
+    std::cout<<"viewport"<<std::endl;
+
     } // Viewport()
 
 //-------------------------------------------------//
@@ -277,14 +319,18 @@ void FakeGL::TransformVertex()
 
         // implement matrix
         Homogeneous4 hg4(vertex.position.x, vertex.position.y, vertex.position.z);
-        auto worldCoord = this->worldMat*hg4;
-        worldCoord.w = 1;
-        auto cameraCoord = this->cameraMat*worldCoord;
+//        auto worldCoord = this->worldMat*hg4;
+//        worldCoord.w = 1;
+//        auto cameraCoord = this->cameraMat*worldCoord;
+
+        Homogeneous4 result;
+        if(this->currentMatMode==FAKEGL_MODELVIEW){
+            result = this->modelViewMat * hg4;
+
+        }
 
 
-
-
-        screenVertexWithAttributes  screenVertex(cameraCoord.x,cameraCoord.y, cameraCoord.z);
+        screenVertexWithAttributes  screenVertex(result.x,result.y, result.z);
         screenVertex.colour.red = 123;
         screenVertex.colour.blue= 132;
         screenVertex.colour.green =213;
@@ -312,7 +358,7 @@ bool FakeGL::RasterisePrimitive()
         case 1:{  //rasterise a line
             if(this->rasterQueue.size()>=2){
 
-                std::cout<<"rasterise line"<<std::endl;
+//                std::cout<<"rasterise line"<<std::endl;
                 auto vertex1 = rasterQueue.front();rasterQueue.pop_front();
                 auto vertex2 = rasterQueue.front();rasterQueue.pop_front();
 //                screenVertexWithAttributes rasterVertex1(vertex1.position.x, vertex1.position.y, vertex1.position.z);
@@ -385,8 +431,8 @@ void FakeGL::RasteriseLineSegment(screenVertexWithAttributes &vertex0, screenVer
        int x0 = vertex0.position.x, y0 = vertex0.position.y;
        int x1 = vertex1.position.x, y1 = vertex1.position.y;
 
-       std::cout<<x0<<" "<<y0<<std::endl;
-       std::cout<<x1<<" "<<y1<<std::endl;
+//       std::cout<<x0<<" "<<y0<<std::endl;
+//       std::cout<<x1<<" "<<y1<<std::endl;
        bool steep = false;
            if (std::abs(x0-x1)<std::abs(y0-y1)) {
                std::swap(x0, y0);
@@ -518,12 +564,15 @@ void FakeGL::RasteriseTriangle(screenVertexWithAttributes &vertex0, screenVertex
 void FakeGL::ProcessFragment()
     { // ProcessFragment()
         while(!this->fragmentQueue.empty()){
+//            std::cout<<"processfragment"<<std::endl;
             auto fragment = this->fragmentQueue.front();
             this->fragmentQueue.pop_front();
 
             int x = fragment.col;
             int y = fragment.row;
-            this->frameBuffer[x][y] = fragment.colour;
+            this->frameBuffer[x][y].red=12;
+            this->frameBuffer[x][y].green=23;
+            this->frameBuffer[x][y].blue=21;
 
         }
 
