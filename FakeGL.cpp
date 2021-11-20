@@ -109,7 +109,6 @@ void FakeGL::LoadIdentity()
     { // LoadIdentity()
         if(this->currentMatMode==FAKEGL_MODELVIEW){
             this->modelViewMat.SetIdentity();
-            this->matStack.pop();
         }else if(this->currentMatMode == FAKEGL_PROJECTION){
             this->projectionMat.SetIdentity();
         }
@@ -127,9 +126,9 @@ void FakeGL::MultMatrixf(const float *columnMajorCoordinates)
         mat[x][y] = columnMajorCoordinates[i];
     }
     if(this->currentMatMode==FAKEGL_MODELVIEW){
-        this->modelViewMat = this->modelViewMat*mat;
+        this->modelViewMat =  this->modelViewMat * mat;
     }else if(this->currentMatMode == FAKEGL_PROJECTION){
-        this->projectionMat = this->projectionMat*mat;
+        this->projectionMat = this->projectionMat * mat;
     }
 
 
@@ -139,14 +138,28 @@ void FakeGL::MultMatrixf(const float *columnMajorCoordinates)
 // sets up a perspective projection matrix
 void FakeGL::Frustum(float left, float right, float bottom, float top, float zNear, float zFar)
     { // Frustum()
+       std::cout<<"Frustum"<<std::endl;
 //        if(this->currentMatMode==FAKEGL_MODELVIEW){
+       Matrix4 mat;
+       mat.SetZero();
+       float A = (right+left)/(right-left);
+       float B = (top+bottom)/(top-bottom);
+       float C = -(zFar+zNear)/(zFar-zNear);
+       float D = -(2*zFar*zNear)/(zFar-zNear);
 
+       mat[0][0] = (2*zNear)/(right-left);
+       mat[1][1] = (2*zNear)/(top-bottom);
+       mat[0][2] = A;
+       mat[1][2] = B;
+       mat[2][2] = C;
+       mat[2][3] = D;
+       mat[3][2] = -1;
 
-
-//            this->modelViewMat = this->modelViewMat*mat;
-//        }else if(this->currentMatMode == FAKEGL_PROJECTION){
-//            this->projectionMat = this->projectionMat*mat;
-//        }
+        if(this->currentMatMode == FAKEGL_MODELVIEW){
+            this->modelViewMat = mat * this->modelViewMat;
+        }else if(this->currentMatMode == FAKEGL_PROJECTION){
+            this->projectionMat =mat * this->projectionMat;
+        }
 
 
 
@@ -162,7 +175,7 @@ void FakeGL::Rotatef(float angle, float axisX, float axisY, float axisZ)
     { // Rotatef()
         std::cout<<"rotation mat"<<std::endl;
         Matrix4 rotationMat;
-        rotationMat.SetRotation(Cartesian3(axisX, axisY, axisZ), angle);
+        rotationMat.SetRotation(Cartesian3(-axisX, -axisY, -axisZ),angle);
         if(this->currentMatMode==FAKEGL_MODELVIEW){
             this->modelViewMat =  rotationMat * this->modelViewMat;
         }else if(this->currentMatMode == FAKEGL_PROJECTION){
@@ -191,9 +204,9 @@ void FakeGL::Translatef(float xTranslate, float yTranslate, float zTranslate)
     { // Translatef()
     std::cout<<"translatef"<<std::endl;
     Matrix4 translateMat;
-    translateMat.SetTranslation(Cartesian3(xTranslate, yTranslate, zTranslate));
+    translateMat.SetTranslation(Cartesian3(-xTranslate, -yTranslate, -zTranslate));
     if(this->currentMatMode==FAKEGL_MODELVIEW){
-        this->modelViewMat =  translateMat * this->modelViewMat;
+        this->modelViewMat =   translateMat * this->modelViewMat;
     }else if(this->currentMatMode == FAKEGL_PROJECTION){
         this->projectionMat =  translateMat * this->projectionMat;
     }
@@ -202,25 +215,16 @@ void FakeGL::Translatef(float xTranslate, float yTranslate, float zTranslate)
 // sets the viewport
 void FakeGL::Viewport(int x, int y, int width, int height)
     { // Viewport()
-        std::cout<<"viewport"<<std::endl;
-           Matrix4 mat;
-           mat.SetZero();
-           mat[0][3] = x+width/2.f;
-           mat[1][3] = y+height/2.f;
-           mat[2][3] = 1;
+           viewPortMat.SetZero();
+           viewPortMat[0][3] = x+width/2.f;
+           viewPortMat[1][3] = y+height/2.f;
+           viewPortMat[2][3] = 1;
 
-           mat[0][0] = width/2.f;
-           mat[1][1] = height/2.f;
-           mat[2][2] = 1;
-           mat[3][3] = 1;
-        if(this->currentMatMode==FAKEGL_MODELVIEW){
+           viewPortMat[0][0] = width/2.f;
+           viewPortMat[1][1] = height/2.f;
+           viewPortMat[2][2] = 1;
+           viewPortMat[3][3] = 1;
 
-            this->modelViewMat = mat*this->modelViewMat;
-
-
-        }else if(this->currentMatMode == FAKEGL_PROJECTION){
-            this->projectionMat = mat*this->projectionMat;
-        }
 
     } // Viewport()
 
@@ -257,7 +261,6 @@ void FakeGL::TexCoord2f(float u, float v)
 // sets the vertex & launches it down the pipeline
 void FakeGL::Vertex3f(float x, float y, float z)
     { // Vertex3f()
-        std::cout<<"verted3f"<<std::endl;
         vertexWithAttributes vertex(x,y,z);
         this->vertexQueue.push_back(vertex);
         TransformVertex();
@@ -348,7 +351,6 @@ void FakeGL::ClearColor(float red, float green, float blue, float alpha)
 // transform one vertex & shift to the raster queue
 void FakeGL::TransformVertex()
     { // TransformVertex()
-        std::cout<<"transformVertex"<<std::endl;
         auto vertex = this->vertexQueue.front();
         vertexQueue.pop_front();
 
@@ -360,8 +362,8 @@ void FakeGL::TransformVertex()
 
         Homogeneous4 result;
         if(this->currentMatMode==FAKEGL_MODELVIEW){
-            result = this->modelViewMat * hg4;
-
+            auto temp =  this->modelViewMat* hg4;
+            result = viewPortMat* temp;
         }
 
 

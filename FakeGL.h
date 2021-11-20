@@ -133,6 +133,7 @@ class FakeGL
     unsigned int currentMatMode=-1;
     Matrix4 modelViewMat;
     Matrix4 projectionMat;
+    Matrix4 viewPortMat;
     std::stack<Matrix4> matStack;
     //-----------------------------
     // OUTPUT FROM INPUT STAGE
