@@ -406,7 +406,7 @@ void FakeGL::TransformVertex()
 
 
         screenVertexWithAttributes  screenVertex(result.x,result.y, result.z);
-
+        screenVertex.colour = this->colorf;
         this->rasterQueue.push_back(screenVertex);
 
         RasterisePrimitive();
@@ -450,9 +450,6 @@ bool FakeGL::RasterisePrimitive()
                 auto vertex1 = rasterQueue.front();rasterQueue.pop_front();
                 auto vertex2 = rasterQueue.front();rasterQueue.pop_front();
                 auto vertex3 = rasterQueue.front();rasterQueue.pop_front();
-//                screenVertexWithAttributes rasterVertex1(vertex1.position.x*100, vertex1.position.y*100, vertex1.position.z*100);
-//                screenVertexWithAttributes rasterVertex2(vertex2.position.x*100, vertex2.position.y*100, vertex2.position.z*100);
-//                screenVertexWithAttributes rasterVertex3(vertex3.position.x*100, vertex3.position.y*100, vertex3.position.z*100);
 
 
                 RasteriseTriangle(vertex1, vertex2, vertex3);
@@ -564,30 +561,7 @@ void FakeGL::RasteriseLineSegment(screenVertexWithAttributes &vertex0, screenVer
 void FakeGL::RasteriseTriangle(screenVertexWithAttributes &vertex0, screenVertexWithAttributes &vertex1, screenVertexWithAttributes &vertex2)
     { // RasteriseTriangle()
 
-//    std::cout<<vertex0.position.x<<" "<<vertex0.position.y<<std::endl;
-//    std::cout<<vertex1.position.x<<" "<<vertex1.position.y<<std::endl;
-//    std::cout<<vertex2.position.x<<" "<<vertex2.position.y<<std::endl;
 
-//    fragmentWithAttributes rasterFragment1;
-//    rasterFragment1.row = vertex0.position.x;
-//    rasterFragment1.col = vertex0.position.y;
-//    rasterFragment1.colour = vertex0.colour;
-
-//    fragmentWithAttributes rasterFragment2;
-//    rasterFragment2.row = vertex1.position.x;
-//    rasterFragment2.col = vertex1.position.y;
-//    rasterFragment2.colour = vertex1.colour;
-
-//    fragmentWithAttributes rasterFragment3;
-//    rasterFragment3.row = vertex2.position.x;
-//    rasterFragment3.col = vertex2.position.y;
-//    rasterFragment3.colour = vertex2.colour;
-
-//    fragmentQueue.push_back(rasterFragment1);
-//    fragmentQueue.push_back(rasterFragment2);
-//    fragmentQueue.push_back(rasterFragment3);
-
-//    ProcessFragment();
 
     // compute a bounding box that starts inverted to frame size
     // clipping will happen in the raster loop proper
