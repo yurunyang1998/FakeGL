@@ -127,14 +127,21 @@ class FakeGL
     // ATTRIBUTE STATE
     //-----------------------------
     RGBAValue backGroundColor;
+    RGBAValue colorf;
     float lineWidth=1;
     float pointSize=1;
+
     unsigned int currentPrimitive;
     unsigned int currentMatMode=-1;
     Matrix4 modelViewMat;
     Matrix4 projectionMat;
     Matrix4 viewPortMat;
     std::stack<Matrix4> matStack;
+    bool enable_depth_test = false;
+    bool enable_lighting = false;
+    bool enable_texture_2D = false;
+    bool enable_phonh_shading = false;
+
     //-----------------------------
     // OUTPUT FROM INPUT STAGE
     // INPUT TO TRANSFORM STAGE
@@ -156,7 +163,8 @@ class FakeGL
     //-----------------------------
     // RASTERISE STATE
     //-----------------------------
-
+    //depth test
+    bool depthTest(int x, int y, float z);
     //-----------------------------
     // OUTPUT FROM RASTER STAGE
     // INPUT TO FRAGMENT STAGE
