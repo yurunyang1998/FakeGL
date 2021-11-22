@@ -27,14 +27,7 @@
 FakeGL::FakeGL()
     { // constructor
         std::cout<<"construct FakeGL"<<std::endl;
-        int width = frameBuffer.width;
-        int height = frameBuffer.height;
-        this->depthBuffer.Resize(width, height);
-        for(int i=0;i<width;i++){
-            for(int j=0;j<height;j++){
-                depthBuffer[i][j].alpha = -9999;
-            }
-        }
+
     } // constructor
 
 // destructor
@@ -312,13 +305,25 @@ void FakeGL::Vertex3f(float x, float y, float z)
 // disables a specific flag in the library
 void FakeGL::Disable(unsigned int property)
     { // Disable()
+            if(property == FAKEGL_DEPTH_TEST)
+                this->enable_depth_test = false;
+            if(property == FAKEGL_LIGHTING)
+                this->enable_lighting = false;
+            if(property == FAKEGL_TEXTURE_2D)
+                this->enable_texture_2D = false;
+            if(property == FAKEGL_PHONG_SHADING)
+                this->enable_phonh_shading = false;
+
     } // Disable()
 
 // enables a specific flag in the library
 void FakeGL::Enable(unsigned int property)
     { // Enable()
-        if(property == FAKEGL_DEPTH_TEST)
+        std::cout<<"enable"<<std::endl;
+        if(property == FAKEGL_DEPTH_TEST){
             this->enable_depth_test = true;
+            this->depthBuffer.Resize(frameBuffer.width, frameBuffer.height);
+        }
         if(property == FAKEGL_LIGHTING)
             this->enable_lighting = true;
         if(property == FAKEGL_TEXTURE_2D)
@@ -367,17 +372,20 @@ void FakeGL::TexImage2D(const RGBAImage &textureImage)
 // clears the frame buffer
 void FakeGL::Clear(unsigned int mask)
     { // Clear()
+    std::cout<<"clean"<<std::endl;
         int width = this->frameBuffer.width;
         int height = this->frameBuffer.height;
         for(int i=0;i<height;i++){
             for(int j=0;j<width;j++){
-
                 this->frameBuffer[i][j] = backGroundColor;
+                if(this->enable_depth_test) // clean depth buffer
+                    this->depthBuffer[i][j].alpha = 0;
             }
-        }
-
+        }  
 
 } // Clear()
+
+
 
 // sets the clear colour for the frame buffer
 void FakeGL::ClearColor(float red, float green, float blue, float alpha)
@@ -466,8 +474,9 @@ bool FakeGL::RasterisePrimitive()
 // depth test
 bool FakeGL::depthTest(int x, int y, float z){
 
-    if(this->frameBuffer[x][y].alpha<=z){
-        this->frameBuffer[x][y].alpha = z;
+    if(this->depthBuffer[x][y].alpha < z/2){
+        this->depthBuffer[x][y].alpha = z/2;
+//        std::cout<<z/2<<std::endl;
         return true;
     }else
         return false;
@@ -643,7 +652,7 @@ void FakeGL::RasteriseTriangle(screenVertexWithAttributes &vertex0, screenVertex
 
             if(this->enable_depth_test){
 
-                if(depthTest(rasterFragment.row, rasterFragment.col,z)){
+                if(depthTest(rasterFragment.row, rasterFragment.col,-z*255)){
                     rasterFragment.colour = alpha * vertex0.colour + beta * vertex1.colour + gamma * vertex2.colour;
                     // now we add it to the queue for fragment processing
                     fragmentQueue.push_back(rasterFragment);

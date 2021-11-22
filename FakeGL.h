@@ -322,7 +322,6 @@ class FakeGL
 
     // clears the frame buffer
     void Clear(unsigned int mask);
-    
     // sets the clear colour for the frame buffer
     void ClearColor(float red, float green, float blue, float alpha);
     
