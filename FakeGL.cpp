@@ -125,8 +125,9 @@ void FakeGL::MultMatrixf(const float *columnMajorCoordinates)
     for(int i=0;i<16;i++){
         int x = i%4;
         int y = i/4;
-        mat[x][y] = columnMajorCoordinates[i];
+        mat[y][x] = columnMajorCoordinates[i];
     }
+
     if(this->currentMatMode==FAKEGL_MODELVIEW){
         this->modelViewMat =  mat * this->modelViewMat;
     }else if(this->currentMatMode == FAKEGL_PROJECTION){
@@ -158,7 +159,7 @@ void FakeGL::Frustum(float left, float right, float bottom, float top, float zNe
        mat[3][2] = -1;
 
         if(this->currentMatMode == FAKEGL_MODELVIEW){
-            this->modelViewMat =  this->modelViewMat * mat;
+            this->modelViewMat = mat*  this->modelViewMat;
         }else if(this->currentMatMode == FAKEGL_PROJECTION){
             this->projectionMat =mat * this->projectionMat;
         }
@@ -185,7 +186,7 @@ void FakeGL::Ortho(float left, float right, float bottom, float top, float zNear
         mat[3][3] = 1;
 
         if(this->currentMatMode == FAKEGL_MODELVIEW){
-            this->modelViewMat =  this->modelViewMat*mat;
+            this->modelViewMat = mat* this->modelViewMat;
         }else if(this->currentMatMode == FAKEGL_PROJECTION){
             this->projectionMat =mat * this->projectionMat;
         }
@@ -409,8 +410,11 @@ void FakeGL::TransformVertex()
         Homogeneous4 hg4(vertex.position.x, vertex.position.y, vertex.position.z);
         Homogeneous4 result;
         auto temp =  this->modelViewMat* hg4;
-        result = viewPortMat* temp;
-        result = this->projectionMat * result;
+        result = this->projectionMat* temp;
+        Cartesian3 ndcs = result.Point();
+        Homogeneous4 ndcsHg4 = Homogeneous4(ndcs.x, ndcs.y, ndcs.z);
+
+        result = this->viewPortMat * ndcsHg4;
 
 
         screenVertexWithAttributes  screenVertex(result.x,result.y, result.z);
