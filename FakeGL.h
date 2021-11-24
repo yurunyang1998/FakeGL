@@ -71,7 +71,7 @@ class vertexWithAttributes
     Homogeneous4 position;
 	// Colour
     RGBAValue colour;
-
+    float u,v;
 	// you may need to add more state here
 
     vertexWithAttributes(float x, float y, float z){
@@ -88,7 +88,7 @@ class screenVertexWithAttributes
     Cartesian3 position;
 	// Colour
     RGBAValue colour;
-
+    float u,v;
 	// you may need to add more state here
     screenVertexWithAttributes(float x, float y, float z){
         position = Cartesian3(x,y,z);
@@ -128,11 +128,14 @@ class FakeGL
     //-----------------------------
     RGBAValue backGroundColor;
     RGBAValue colorf;
+    RGBAImage texture;
+
     float lineWidth=1;
     float pointSize=1;
 
     unsigned int currentPrimitive;
     unsigned int currentMatMode=-1;
+    unsigned int textureMode;
     Matrix4 modelViewMat;
     Matrix4 projectionMat;
     Matrix4 viewPortMat;
@@ -141,6 +144,14 @@ class FakeGL
     bool enable_lighting = false;
     bool enable_texture_2D = false;
     bool enable_phonh_shading = false;
+
+    float ambietLight[4];
+    float diffuseLight[4];
+    float specularLight[4];
+    float positionLight[4];
+    float textureU = -1, textureV=-1;
+
+    std::deque<RGBAValue> textureQueue;
 
     //-----------------------------
     // OUTPUT FROM INPUT STAGE

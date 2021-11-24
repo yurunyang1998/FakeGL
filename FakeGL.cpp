@@ -125,13 +125,13 @@ void FakeGL::MultMatrixf(const float *columnMajorCoordinates)
     for(int i=0;i<16;i++){
         int x = i%4;
         int y = i/4;
-        mat[y][x] = columnMajorCoordinates[i];
+        mat[x][y] = columnMajorCoordinates[i];
     }
 
     if(this->currentMatMode==FAKEGL_MODELVIEW){
-        this->modelViewMat =  mat * this->modelViewMat;
+        this->modelViewMat =  this->modelViewMat *mat;
     }else if(this->currentMatMode == FAKEGL_PROJECTION){
-        this->projectionMat = mat * this->projectionMat;
+        this->projectionMat = this->projectionMat * mat;
     }
 
 
@@ -159,9 +159,9 @@ void FakeGL::Frustum(float left, float right, float bottom, float top, float zNe
        mat[3][2] = -1;
 
         if(this->currentMatMode == FAKEGL_MODELVIEW){
-            this->modelViewMat = mat*  this->modelViewMat;
+            this->modelViewMat = this->modelViewMat * mat;
         }else if(this->currentMatMode == FAKEGL_PROJECTION){
-            this->projectionMat =mat * this->projectionMat;
+            this->projectionMat = this->projectionMat * mat;
         }
 
 
@@ -186,9 +186,9 @@ void FakeGL::Ortho(float left, float right, float bottom, float top, float zNear
         mat[3][3] = 1;
 
         if(this->currentMatMode == FAKEGL_MODELVIEW){
-            this->modelViewMat = mat* this->modelViewMat;
+            this->modelViewMat =  this->modelViewMat * mat;
         }else if(this->currentMatMode == FAKEGL_PROJECTION){
-            this->projectionMat =mat * this->projectionMat;
+            this->projectionMat = this->projectionMat * mat;
         }
 
 
@@ -202,9 +202,9 @@ void FakeGL::Rotatef(float angle, float axisX, float axisY, float axisZ)
         float theta = angle * 3.14 / 180.f;
         rotationMat.SetRotation(Cartesian3(axisX, axisY, axisZ),theta);
         if(this->currentMatMode==FAKEGL_MODELVIEW){
-            this->modelViewMat =  rotationMat * this->modelViewMat;
+            this->modelViewMat =  this->modelViewMat * rotationMat;
         }else if(this->currentMatMode == FAKEGL_PROJECTION){
-            this->projectionMat =  rotationMat * this->projectionMat;
+            this->projectionMat = this->projectionMat * rotationMat;
         }
 
     } // Rotatef()
@@ -216,9 +216,9 @@ void FakeGL::Scalef(float xScale, float yScale, float zScale)
         Matrix4 scaleMat;
         scaleMat.SetScale(xScale, yScale, zScale);
         if(this->currentMatMode==FAKEGL_MODELVIEW){
-            this->modelViewMat =  scaleMat * this->modelViewMat;
+            this->modelViewMat =  this->modelViewMat *scaleMat;
         }else if(this->currentMatMode == FAKEGL_PROJECTION){
-            this->projectionMat =  scaleMat * this->projectionMat;
+            this->projectionMat =  this->projectionMat *scaleMat;
         }
 
 
@@ -232,9 +232,9 @@ void FakeGL::Translatef(float xTranslate, float yTranslate, float zTranslate)
     translateMat.SetTranslation(Cartesian3(xTranslate, yTranslate, zTranslate));
 
     if(this->currentMatMode==FAKEGL_MODELVIEW){
-        this->modelViewMat =  translateMat * this->modelViewMat  ;
+        this->modelViewMat =   this->modelViewMat * translateMat ;
     }else if(this->currentMatMode == FAKEGL_PROJECTION){
-        this->projectionMat =  translateMat * this->projectionMat;
+        this->projectionMat =  this->projectionMat * translateMat;
     }
     } // Translatef()
 
@@ -287,12 +287,18 @@ void FakeGL::Normal3f(float x, float y, float z)
 // sets the texture coordinates
 void FakeGL::TexCoord2f(float u, float v)
     { // TexCoord2f()
+
+        this->textureU = u;
+        this->textureV = v;
+
     } // TexCoord2f()
 
 // sets the vertex & launches it down the pipeline
 void FakeGL::Vertex3f(float x, float y, float z)
     { // Vertex3f()
         vertexWithAttributes vertex(x,y,z);
+        vertex.u = this->textureU;
+        vertex.v = this->textureV;
         this->vertexQueue.push_back(vertex);
         TransformVertex();
     } // Vertex3f()
@@ -343,6 +349,37 @@ void FakeGL::Enable(unsigned int property)
 // sets properties for the one and only light
 void FakeGL::Light(int parameterName, const float *parameterValues)
     { // Light()
+        if(parameterName==FAKEGL_AMBIENT){
+            ambietLight[0] = parameterValues[0];
+            ambietLight[1] = parameterValues[1];
+            ambietLight[2] = parameterValues[2];
+            ambietLight[3] = parameterValues[3];
+
+        }
+        if(parameterName ==FAKEGL_DIFFUSE){
+            diffuseLight[0]=parameterValues[0];
+            diffuseLight[1]=parameterValues[1];
+            diffuseLight[2]=parameterValues[2];
+            diffuseLight[3]=parameterValues[3];
+
+        }
+        if(parameterName==FAKEGL_SPECULAR){
+            specularLight[0] = parameterValues[0];
+            specularLight[1] = parameterValues[1];
+            specularLight[2] = parameterValues[2];
+            specularLight[3] = parameterValues[3];
+
+        }
+        if(parameterName==FAKEGL_POSITION){
+            positionLight[0] = parameterValues[0];
+            positionLight[1] = parameterValues[1];
+            positionLight[2] = parameterValues[2];
+            positionLight[3] = parameterValues[3];
+
+        }
+
+
+
     } // Light()
 
 //-------------------------------------------------//
@@ -357,11 +394,19 @@ void FakeGL::Light(int parameterName, const float *parameterValues)
 // sets whether textures replace or modulate
 void FakeGL::TexEnvMode(unsigned int textureMode)
     { // TexEnvMode()
+        if(textureMode == FAKEGL_MODULATE){
+            this->textureMode = FAKEGL_MODULATE;
+        }
+        if(textureMode == FAKEGL_REPLACE){
+            this->textureMode = FAKEGL_REPLACE;
+        }
     } // TexEnvMode()
 
 // sets the texture image that corresponds to a given ID
 void FakeGL::TexImage2D(const RGBAImage &textureImage)
     { // TexImage2D()
+
+        this->texture = textureImage;
     } // TexImage2D()
 
 //-------------------------------------------------//
@@ -419,6 +464,12 @@ void FakeGL::TransformVertex()
 
         screenVertexWithAttributes  screenVertex(result.x,result.y, result.z);
         screenVertex.colour = this->colorf;
+
+        if(this->enable_texture_2D){
+            screenVertex.u = this->textureU;
+            screenVertex.v = this->textureV;
+        }
+
         this->rasterQueue.push_back(screenVertex);
 
         RasterisePrimitive();
@@ -478,8 +529,8 @@ bool FakeGL::RasterisePrimitive()
 // depth test
 bool FakeGL::depthTest(int x, int y, float z){
 
-    if(this->depthBuffer[x][y].alpha < z/2){
-        this->depthBuffer[x][y].alpha = z/2;
+    if(this->depthBuffer[x][y].alpha > z){
+        this->depthBuffer[x][y].alpha = z;
 //        std::cout<<z/2<<std::endl;
         return true;
     }else
@@ -627,6 +678,9 @@ void FakeGL::RasteriseTriangle(screenVertexWithAttributes &vertex0, screenVertex
     // create a fragment for reuse
     fragmentWithAttributes rasterFragment;
 
+    int textureWidth = texture.width;
+    int textureHeight = texture.height;
+
     // loop through the pixels in the bounding box
     for (rasterFragment.row = minY; rasterFragment.row <= maxY; rasterFragment.row++)
         { // per row
@@ -654,23 +708,37 @@ void FakeGL::RasteriseTriangle(screenVertexWithAttributes &vertex0, screenVertex
 
             float z = vertex0.position.z * alpha+ vertex1.position.z * beta + vertex2.position.z * gamma;
 
-            if(this->enable_depth_test){
 
+            rasterFragment.colour = alpha * vertex0.colour + beta * vertex1.colour + gamma * vertex2.colour;
+
+            if(this->enable_depth_test){
                 if(depthTest(rasterFragment.row, rasterFragment.col,-z*255)){
-                    rasterFragment.colour = alpha * vertex0.colour + beta * vertex1.colour + gamma * vertex2.colour;
                     // now we add it to the queue for fragment processing
-                    fragmentQueue.push_back(rasterFragment);
-                    continue;
                 }else
                     continue;
             }
-            else{
-                // compute colour
-                rasterFragment.colour = alpha * vertex0.colour + beta * vertex1.colour + gamma * vertex2.colour;
-                // now we add it to the queue for fragment processing
-                fragmentQueue.push_back(rasterFragment);
-    //            std::cout<<rasterFragment.row<<" "<<rasterFragment.col<<std::endl;
-                }
+
+
+            if(this->enable_texture_2D){
+
+                int interpU = (alpha * vertex0.u + beta * vertex2.u + gamma * vertex1.u)* textureHeight ;
+                int interpV = (alpha * vertex0.v + beta * vertex2.v + gamma * vertex1.v)* textureWidth;
+                if(this->textureMode == FAKEGL_REPLACE){
+                    rasterFragment.colour = this->texture[interpU][interpV];
+
+                }else if( this->textureMode == FAKEGL_MODULATE){
+                    rasterFragment.colour.modulate(this->texture[interpU][interpV]);
+            }
+
+
+
+          }
+
+
+
+
+            fragmentQueue.push_back(rasterFragment);
+
             } // per pixel
 
         } // per row
@@ -687,7 +755,8 @@ void FakeGL::ProcessFragment()
 
                 int x = fragment.col;
                 int y = fragment.row;
-                this->frameBuffer[x][y] = fragment.colour;
+
+                this->frameBuffer[y][x] = fragment.colour;
         }
 
 
