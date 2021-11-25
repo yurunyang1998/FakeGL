@@ -425,7 +425,7 @@ void FakeGL::Clear(unsigned int mask)
             for(int j=0;j<width;j++){
                 this->frameBuffer[i][j] = backGroundColor;
                 if(this->enable_depth_test) // clean depth buffer
-                    this->depthBuffer[i][j].alpha = 0;
+                    this->depthBuffer[i][j].alpha = 255;
             }
         }  
 
@@ -528,10 +528,8 @@ bool FakeGL::RasterisePrimitive()
 
 // depth test
 bool FakeGL::depthTest(int x, int y, float z){
-
-    if(this->depthBuffer[x][y].alpha > z){
-        this->depthBuffer[x][y].alpha = z;
-//        std::cout<<z/2<<std::endl;
+    if(this->depthBuffer[x][y].alpha >= z/2){
+        this->depthBuffer[x][y].alpha = z/2;
         return true;
     }else
         return false;
@@ -712,7 +710,7 @@ void FakeGL::RasteriseTriangle(screenVertexWithAttributes &vertex0, screenVertex
             rasterFragment.colour = alpha * vertex0.colour + beta * vertex1.colour + gamma * vertex2.colour;
 
             if(this->enable_depth_test){
-                if(depthTest(rasterFragment.row, rasterFragment.col,-z*255)){
+                if(depthTest(rasterFragment.row, rasterFragment.col,z*255)){
                     // now we add it to the queue for fragment processing
                 }else
                     continue;
@@ -721,8 +719,14 @@ void FakeGL::RasteriseTriangle(screenVertexWithAttributes &vertex0, screenVertex
 
             if(this->enable_texture_2D){
 
-                int interpU = (alpha * vertex0.u + beta * vertex2.u + gamma * vertex1.u)* textureHeight ;
+                int interpU = (alpha * vertex0.u + beta * vertex2.u + gamma * vertex1.u)* textureHeight;
                 int interpV = (alpha * vertex0.v + beta * vertex2.v + gamma * vertex1.v)* textureWidth;
+
+//                int interpU = (alpha * vertex2.u + beta * vertex1.u + gamma * vertex0.u)* textureHeight;
+//                int interpV = (alpha * vertex2.v + beta * vertex1.v + gamma * vertex0.v)* textureWidth;
+
+
+
                 if(this->textureMode == FAKEGL_REPLACE){
                     rasterFragment.colour = this->texture[interpU][interpV];
 
