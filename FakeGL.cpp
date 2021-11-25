@@ -719,8 +719,8 @@ void FakeGL::RasteriseTriangle(screenVertexWithAttributes &vertex0, screenVertex
 
             if(this->enable_texture_2D){
 
-                int interpU = (alpha * vertex0.u + beta * vertex2.u + gamma * vertex1.u)* textureHeight;
-                int interpV = (alpha * vertex0.v + beta * vertex2.v + gamma * vertex1.v)* textureWidth;
+                int interpU = (alpha * vertex0.u + beta * vertex1.u + gamma * vertex2.u)* textureWidth;
+                int interpV = (alpha * vertex0.v + beta * vertex1.v + gamma * vertex2.v)* textureHeight;
 
 //                int interpU = (alpha * vertex2.u + beta * vertex1.u + gamma * vertex0.u)* textureHeight;
 //                int interpV = (alpha * vertex2.v + beta * vertex1.v + gamma * vertex0.v)* textureWidth;
@@ -728,10 +728,10 @@ void FakeGL::RasteriseTriangle(screenVertexWithAttributes &vertex0, screenVertex
 
 
                 if(this->textureMode == FAKEGL_REPLACE){
-                    rasterFragment.colour = this->texture[interpU][interpV];
+                    rasterFragment.colour = this->texture[interpV][interpU];
 
                 }else if( this->textureMode == FAKEGL_MODULATE){
-                    rasterFragment.colour.modulate(this->texture[interpU][interpV]);
+                    rasterFragment.colour.modulate(this->texture[interpV][interpU]);
             }
 
 
