@@ -73,6 +73,14 @@ class vertexWithAttributes
     RGBAValue colour;
     float u,v;
 	// you may need to add more state here
+    Homogeneous4 normal;
+
+    float emissionMaterial[4];
+    float ambientMaterial[4];
+    float specularMaterial[4];
+    float diffuseMaterial[4];
+    float shinessMaterial;
+
 
     vertexWithAttributes(float x, float y, float z){
         position = Homogeneous4(x,y,z);
@@ -89,6 +97,13 @@ class screenVertexWithAttributes
 	// Colour
     RGBAValue colour;
     float u,v;
+    Homogeneous4 normal;
+
+    float emissionMaterial[4];
+    float ambientMaterial[4];
+    float specularMaterial[4];
+    float diffuseMaterial[4];
+    float shinessMaterial;
 	// you may need to add more state here
     screenVertexWithAttributes(float x, float y, float z){
         position = Cartesian3(x,y,z);
@@ -149,7 +164,15 @@ class FakeGL
     float diffuseLight[4];
     float specularLight[4];
     float positionLight[4];
+
+    float emissionMaterial[4];
+    float ambientMaterial[4];
+    float specularMaterial[4];
+    float diffuseMaterial[4];
+    float shinessMaterial;
+
     float textureU = -1, textureV=-1;
+    Homogeneous4 normal;
 
     std::deque<RGBAValue> textureQueue;
 

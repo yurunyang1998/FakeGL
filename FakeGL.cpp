@@ -273,15 +273,47 @@ void FakeGL::Color3f(float red, float green, float blue)
 // sets material properties
 void FakeGL::Materialf(unsigned int parameterName, const float parameterValue)
     { // Materialf()
+        if(parameterName==FAKEGL_SHININESS){
+            shinessMaterial = parameterValue;
+        }
     } // Materialf()
 
 void FakeGL::Materialfv(unsigned int parameterName, const float *parameterValues)
     { // Materialfv()
+        if(parameterName==FAKEGL_EMISSION){
+            this->emissionMaterial[0] = parameterValues[0];
+            this->emissionMaterial[1] = parameterValues[1];
+            this->emissionMaterial[2] = parameterValues[2];
+            this->emissionMaterial[3] = parameterValues[3];
+        }
+        if(parameterName==FAKEGL_DIFFUSE){
+            this->diffuseMaterial[0] = parameterValues[0];
+            this->diffuseMaterial[1] = parameterValues[1];
+            this->diffuseMaterial[2] = parameterValues[2];
+            this->diffuseMaterial[3] = parameterValues[3];
+        }
+        if(parameterName==FAKEGL_SPECULAR){
+            this->specularMaterial[0] = parameterValues[0];
+            this->specularMaterial[1] = parameterValues[1];
+            this->specularMaterial[2] = parameterValues[2];
+            this->specularMaterial[3] = parameterValues[3];
+           }
+        if(parameterName == FAKEGL_AMBIENT){
+            this->ambientMaterial[0] = parameterValues[0];
+            this->ambientMaterial[1] = parameterValues[1];
+            this->ambientMaterial[2] = parameterValues[2];
+            this->ambientMaterial[3] = parameterValues[3];
+
+
+        }
+
+
     } // Materialfv()
 
 // sets the normal vector
 void FakeGL::Normal3f(float x, float y, float z)
     { // Normal3f()
+        this->normal = Homogeneous4(x,y,z,0);
     } // Normal3f()
 
 // sets the texture coordinates
@@ -299,6 +331,16 @@ void FakeGL::Vertex3f(float x, float y, float z)
         vertexWithAttributes vertex(x,y,z);
         vertex.u = this->textureU;
         vertex.v = this->textureV;
+        vertex.normal = this->normal;
+
+        std::copy(std::begin(this->ambientMaterial), std::end(this->ambientMaterial), std::begin(vertex.ambientMaterial));
+        std::copy(std::begin(this->emissionMaterial), std::end(this->emissionMaterial), std::begin(vertex.emissionMaterial));
+        std::copy(std::begin(this->specularMaterial), std::end(this->specularMaterial), std::begin(vertex.specularMaterial));
+        std::copy(std::begin(this->diffuseMaterial), std::end(this->diffuseMaterial), std::begin(vertex.diffuseMaterial));
+        vertex.shinessMaterial = this->shinessMaterial;
+
+
+
         this->vertexQueue.push_back(vertex);
         TransformVertex();
     } // Vertex3f()
@@ -453,22 +495,37 @@ void FakeGL::TransformVertex()
 
         // implement matrix
         Homogeneous4 hg4(vertex.position.x, vertex.position.y, vertex.position.z);
-        Homogeneous4 result;
         auto temp =  this->modelViewMat* hg4;
-        result = this->projectionMat* temp;
-        Cartesian3 ndcs = result.Point();
+        Homogeneous4 screenResult = this->projectionMat* temp;
+        Cartesian3 ndcs = screenResult.Point();
         Homogeneous4 ndcsHg4 = Homogeneous4(ndcs.x, ndcs.y, ndcs.z);
+        screenResult = this->viewPortMat * ndcsHg4;
 
-        result = this->viewPortMat * ndcsHg4;
+        Homogeneous4 hg4Normal = this->modelViewMat * vertex.normal;
 
 
-        screenVertexWithAttributes  screenVertex(result.x,result.y, result.z);
+
+        screenVertexWithAttributes  screenVertex(screenResult.x, screenResult.y, screenResult.z);
         screenVertex.colour = this->colorf;
+        screenVertex.normal = hg4Normal;
 
         if(this->enable_texture_2D){
             screenVertex.u = this->textureU;
             screenVertex.v = this->textureV;
         }
+        if(this->enable_lighting){
+            std::copy(std::begin(vertex.ambientMaterial), std::end(vertex.ambientMaterial),
+                      std::begin(screenVertex.ambientMaterial));
+            std::copy(std::begin(vertex.diffuseMaterial), std::end(vertex.diffuseMaterial),
+                      std::begin(screenVertex.diffuseMaterial));
+            std::copy(std::begin(vertex.specularMaterial), std::end(vertex.specularMaterial),
+                      std::begin(screenVertex.specularMaterial));
+            std::copy(std::begin(vertex.emissionMaterial), std::end(vertex.emissionMaterial),
+                      std::begin(screenVertex.emissionMaterial));
+           screenVertex.shinessMaterial = vertex.shinessMaterial;
+
+        }
+
 
         this->rasterQueue.push_back(screenVertex);
 
@@ -717,15 +774,11 @@ void FakeGL::RasteriseTriangle(screenVertexWithAttributes &vertex0, screenVertex
             }
 
 
+
             if(this->enable_texture_2D){
 
                 int interpU = (alpha * vertex0.u + beta * vertex1.u + gamma * vertex2.u)* textureWidth;
                 int interpV = (alpha * vertex0.v + beta * vertex1.v + gamma * vertex2.v)* textureHeight;
-
-//                int interpU = (alpha * vertex2.u + beta * vertex1.u + gamma * vertex0.u)* textureHeight;
-//                int interpV = (alpha * vertex2.v + beta * vertex1.v + gamma * vertex0.v)* textureWidth;
-
-
 
                 if(this->textureMode == FAKEGL_REPLACE){
                     rasterFragment.colour = this->texture[interpV][interpU];
@@ -733,10 +786,18 @@ void FakeGL::RasteriseTriangle(screenVertexWithAttributes &vertex0, screenVertex
                 }else if( this->textureMode == FAKEGL_MODULATE){
                     rasterFragment.colour.modulate(this->texture[interpV][interpU]);
             }
-
-
-
           }
+
+
+
+            if(this->enable_lighting){
+
+
+
+
+
+            }
+
 
 
 
