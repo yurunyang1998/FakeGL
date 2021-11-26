@@ -45,7 +45,7 @@ FakeGL::~FakeGL()
 void FakeGL::Begin(unsigned int PrimitiveType)
     { // Begin()
 
-       this->currentPrimitive = PrimitiveType;
+       this->currentPrimitive = PrimitiveType; // set the primitive type
 
     } // Begin()
 
@@ -58,7 +58,7 @@ void FakeGL::End()
 // sets the size of a point for drawing
 void FakeGL::PointSize(float size)
     { // PointSize()
-        this->pointSize = size;
+        this->pointSize = size;    // set the print size
     } // PointSize()
 
 // sets the width of a line for drawing purposes
@@ -626,7 +626,7 @@ void FakeGL::RasterisePoint(screenVertexWithAttributes &vertex0)
 
                 //TODO: implement depth test
 
-                fragmentWithAttributes shaderVertex(_x,_y,vertex0.colour);
+                fragmentWithAttributes shaderVertex(_y,_x,vertex0.colour);
                 this->fragmentQueue.push_back(shaderVertex);
 
             }
@@ -667,10 +667,10 @@ void FakeGL::RasteriseLineSegment(screenVertexWithAttributes &vertex0, screenVer
            int y = y0;
            for (int x=x0; x<=x1; x++) {
                if (steep) {
-                   fragmentWithAttributes fragmentVertex(y, x, colorf);
+                   fragmentWithAttributes fragmentVertex(x, y, colorf);
                    this->fragmentQueue.push_back(fragmentVertex);
                } else {
-                   fragmentWithAttributes fragmentVertex(x, y, colorf);
+                   fragmentWithAttributes fragmentVertex(y, x, colorf);
                    this->fragmentQueue.push_back(fragmentVertex);
                }
                error2 += derror2;
