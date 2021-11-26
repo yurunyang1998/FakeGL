@@ -775,8 +775,6 @@ void FakeGL::RasteriseTriangle(screenVertexWithAttributes &vertex0, screenVertex
 
     for(int i=0;i<3;i++){
 
-        auto tempa = std::max(v0Normal.dot(lightPosition), 0.0f);
-        auto tempb = std::pow(std::max(v0reflectDir.dot(eyeDir_), 0.0f), this->shinessMaterial);
 
         auto v0ambient = ambietLight[i]*vertex0.ambientMaterial[i];
         auto v1ambient = ambietLight[i]*vertex1.ambientMaterial[i];
@@ -856,12 +854,46 @@ void FakeGL::RasteriseTriangle(screenVertexWithAttributes &vertex0, screenVertex
 
             if(this->enable_lighting){
 
-               std::cout<<"enable light"<<std::endl;
                if(this->enable_phonh_shading){
+
+                   Cartesian3 interplNormal;
+                   interplNormal = alpha * v0Normal + beta*v1Normal + gamma*v2Normal;
+
+                   float interplAmbientMaterial[3];
+                   float interplDiffuseMaterial[3];
+                   float interplspecularMastrial[3];
+                   for(int i=0;i<3;i++){
+                       interplAmbientMaterial[i] = alpha*vertex0.ambientMaterial[i] + beta* vertex1.ambientMaterial[i] + gamma*vertex2.ambientMaterial[i];
+                       interplDiffuseMaterial[i] = alpha*vertex0.diffuseMaterial[i] + beta * vertex1.diffuseMaterial[i] + gamma*vertex2.diffuseMaterial[i];
+                       interplspecularMastrial[i] = alpha*vertex0.specularMaterial[i] + beta *vertex1.specularMaterial[i] + gamma*vertex2.specularMaterial[i];
+                   }
+
+                   auto lightReflect = reflect(lightPosition, interplNormal);
+
+                   rasterFragment.colour.red *= ambietLight[0]*interplAmbientMaterial[0] +
+                      diffuseLight[0]*interplspecularMastrial[0]*std::max(interplNormal.dot(lightPosition), 0.0f)+
+                      specularLight[0]*interplspecularMastrial[0]*std::pow(std::max(lightReflect.dot(eyeDir_), 0.0f), this->shinessMaterial)+
+                           this->emissionMaterial[0];
+
+                   rasterFragment.colour.green *=  ambietLight[1]*interplAmbientMaterial[1] +
+                      diffuseLight[1]*interplspecularMastrial[1]*std::max(interplNormal.dot(lightPosition), 0.0f)+
+                      specularLight[1]*interplspecularMastrial[1]*std::pow(std::max(lightReflect.dot(eyeDir_), 0.0f), this->shinessMaterial)+
+                           this->emissionMaterial[1];
+
+                   rasterFragment.colour.blue *=  ambietLight[2]*interplAmbientMaterial[2] +
+                      diffuseLight[2]*interplspecularMastrial[2]*std::max(interplNormal.dot(lightPosition), 0.0f)+
+                      specularLight[2]*interplspecularMastrial[2]*std::pow(std::max(lightReflect.dot(eyeDir_), 0.0f), this->shinessMaterial)+
+                           this->emissionMaterial[2];
+
+
+
+
+
 
 
 
                 }else{ //ground shading
+
                     float red = (alpha*vertex0Light[0] + beta*vertex1Light[0] + gamma * vertex2Light[0]);
                     float green = (alpha*vertex0Light[1] + beta*vertex1Light[1] + gamma * vertex2Light[1]);
                     float blue = (alpha*vertex0Light[2] + beta*vertex1Light[2] + gamma * vertex2Light[2]);
