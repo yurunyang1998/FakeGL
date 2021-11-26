@@ -73,6 +73,18 @@ void FakeGL::LineWidth(float width)
 //                                                 //
 //-------------------------------------------------//
 
+
+
+auto FakeGL::reflect(const Cartesian3 & vec,const Cartesian3 & normal) -> Cartesian3
+{
+    float dn = 2 * vec.dot(normal);
+    return vec - normal * dn;
+}
+
+
+
+
+
 // set the matrix mode (i.e. which one we change)   
 void FakeGL::MatrixMode(unsigned int whichMatrix)
     { // MatrixMode()
@@ -273,32 +285,32 @@ void FakeGL::Color3f(float red, float green, float blue)
 // sets material properties
 void FakeGL::Materialf(unsigned int parameterName, const float parameterValue)
     { // Materialf()
-        if(parameterName==FAKEGL_SHININESS){
+        if(parameterName & FAKEGL_SHININESS){
             shinessMaterial = parameterValue;
         }
     } // Materialf()
 
 void FakeGL::Materialfv(unsigned int parameterName, const float *parameterValues)
     { // Materialfv()
-        if(parameterName==FAKEGL_EMISSION){
+        if(parameterName & FAKEGL_EMISSION){
             this->emissionMaterial[0] = parameterValues[0];
             this->emissionMaterial[1] = parameterValues[1];
             this->emissionMaterial[2] = parameterValues[2];
             this->emissionMaterial[3] = parameterValues[3];
         }
-        if(parameterName==FAKEGL_DIFFUSE){
+        if(parameterName&FAKEGL_DIFFUSE){
             this->diffuseMaterial[0] = parameterValues[0];
             this->diffuseMaterial[1] = parameterValues[1];
             this->diffuseMaterial[2] = parameterValues[2];
             this->diffuseMaterial[3] = parameterValues[3];
         }
-        if(parameterName==FAKEGL_SPECULAR){
+        if(parameterName&FAKEGL_SPECULAR){
             this->specularMaterial[0] = parameterValues[0];
             this->specularMaterial[1] = parameterValues[1];
             this->specularMaterial[2] = parameterValues[2];
             this->specularMaterial[3] = parameterValues[3];
            }
-        if(parameterName == FAKEGL_AMBIENT){
+        if(parameterName & FAKEGL_AMBIENT){
             this->ambientMaterial[0] = parameterValues[0];
             this->ambientMaterial[1] = parameterValues[1];
             this->ambientMaterial[2] = parameterValues[2];
@@ -373,7 +385,7 @@ void FakeGL::Enable(unsigned int property)
             this->enable_depth_test = true;
             this->depthBuffer.Resize(frameBuffer.width, frameBuffer.height);
         }
-        if(property == FAKEGL_LIGHTING)
+        if(property ==  FAKEGL_LIGHTING)
             this->enable_lighting = true;
         if(property == FAKEGL_TEXTURE_2D)
             this->enable_texture_2D = true;
@@ -391,28 +403,28 @@ void FakeGL::Enable(unsigned int property)
 // sets properties for the one and only light
 void FakeGL::Light(int parameterName, const float *parameterValues)
     { // Light()
-        if(parameterName==FAKEGL_AMBIENT){
+        if(parameterName & FAKEGL_AMBIENT){
             ambietLight[0] = parameterValues[0];
             ambietLight[1] = parameterValues[1];
             ambietLight[2] = parameterValues[2];
             ambietLight[3] = parameterValues[3];
 
         }
-        if(parameterName ==FAKEGL_DIFFUSE){
+        if(parameterName & FAKEGL_DIFFUSE){
             diffuseLight[0]=parameterValues[0];
             diffuseLight[1]=parameterValues[1];
             diffuseLight[2]=parameterValues[2];
             diffuseLight[3]=parameterValues[3];
 
         }
-        if(parameterName==FAKEGL_SPECULAR){
+        if(parameterName & FAKEGL_SPECULAR){
             specularLight[0] = parameterValues[0];
             specularLight[1] = parameterValues[1];
             specularLight[2] = parameterValues[2];
             specularLight[3] = parameterValues[3];
 
         }
-        if(parameterName==FAKEGL_POSITION){
+        if(parameterName & FAKEGL_POSITION){
             positionLight[0] = parameterValues[0];
             positionLight[1] = parameterValues[1];
             positionLight[2] = parameterValues[2];
@@ -736,6 +748,60 @@ void FakeGL::RasteriseTriangle(screenVertexWithAttributes &vertex0, screenVertex
     int textureWidth = texture.width;
     int textureHeight = texture.height;
 
+    float vertex0Light[3]={0,0,0}, vertex1Light[3]={0,0,0}, vertex2Light[3]={0,0,0};
+    Cartesian3 v0Normal(vertex0.normal.x, vertex0.normal.y, vertex0.normal.z);
+    Cartesian3 v1Normal(vertex1.normal.x, vertex1.normal.y, vertex1.normal.z);
+    Cartesian3 v2Normal(vertex2.normal.x, vertex2.normal.y, vertex2.normal.z);
+
+
+    Homogeneous4 eye{0,0,0,1};
+    auto eyeDir = this->modelViewMat * eye;
+    Cartesian3 eyeDir_(eyeDir.x, eyeDir.y, eyeDir.z);
+//    eyeDir_ = eyeDir_.unit();
+
+
+
+    v0Normal = v0Normal.unit();
+    v1Normal = v1Normal.unit();
+    v2Normal = v2Normal.unit();
+    Cartesian3 lightPosition(this->positionLight[0], this->positionLight[1], this->positionLight[2]);
+    lightPosition = lightPosition.unit();
+
+    auto v0reflectDir = reflect(lightPosition, v0Normal);
+    auto v1reflectDir = reflect(lightPosition, v1Normal);
+    auto v2reflectDir = reflect(lightPosition, v2Normal);
+
+
+
+    for(int i=0;i<3;i++){
+
+        auto tempa = std::max(v0Normal.dot(lightPosition), 0.0f);
+        auto tempb = std::pow(std::max(v0reflectDir.dot(eyeDir_), 0.0f), this->shinessMaterial);
+
+        auto v0ambient = ambietLight[i]*vertex0.ambientMaterial[i];
+        auto v1ambient = ambietLight[i]*vertex1.ambientMaterial[i];
+        auto v2ambient = ambietLight[i]*vertex2.ambientMaterial[i];
+
+        auto v0diffuse = diffuseLight[i]*vertex0.diffuseMaterial[i]* std::max(v0Normal.dot(lightPosition), 0.0f);
+        auto v1diffuse = diffuseLight[i]*vertex1.diffuseMaterial[i]* std::max(v1Normal.dot(lightPosition), 0.0f);
+        auto v2diffuse = diffuseLight[i]*vertex2.diffuseMaterial[i]* std::max(v2Normal.dot(lightPosition), 0.0f);
+
+        auto v0specular = specularLight[i]*vertex0.specularMaterial[i]*std::pow(std::max(v0reflectDir.dot(eyeDir_), 0.0f), this->shinessMaterial);
+        auto v1specular = specularLight[i]*vertex1.specularMaterial[i]*std::pow(std::max(v1reflectDir.dot(eyeDir_), 0.0f), this->shinessMaterial);
+        auto v2specular = specularLight[i]*vertex2.specularMaterial[i]*std::pow(std::max(v2reflectDir.dot(eyeDir_), 0.0f), this->shinessMaterial);
+
+        vertex0Light[i] += v0ambient + v0diffuse + v0specular+ this->emissionMaterial[i];
+
+        vertex1Light[i] += v1ambient + v1diffuse + v1specular+ this->emissionMaterial[i];
+
+        vertex2Light[i] += v2ambient + v2diffuse + v2specular + this->emissionMaterial[i];
+
+    }
+
+
+
+
+
     // loop through the pixels in the bounding box
     for (rasterFragment.row = minY; rasterFragment.row <= maxY; rasterFragment.row++)
         { // per row
@@ -788,15 +854,24 @@ void FakeGL::RasteriseTriangle(screenVertexWithAttributes &vertex0, screenVertex
             }
           }
 
-
-
             if(this->enable_lighting){
 
+               std::cout<<"enable light"<<std::endl;
+               if(this->enable_phonh_shading){
 
 
 
-
+                }else{ //ground shading
+                    float red = (alpha*vertex0Light[0] + beta*vertex1Light[0] + gamma * vertex2Light[0]);
+                    float green = (alpha*vertex0Light[1] + beta*vertex1Light[1] + gamma * vertex2Light[1]);
+                    float blue = (alpha*vertex0Light[2] + beta*vertex1Light[2] + gamma * vertex2Light[2]);
+                    rasterFragment.colour.red *=red;
+                    rasterFragment.colour.green *=green;
+                    rasterFragment.colour.blue *= blue;
+                }
             }
+
+
 
 
 

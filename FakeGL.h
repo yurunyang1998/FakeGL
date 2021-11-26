@@ -25,7 +25,7 @@
 #include <vector>
 #include <deque>
 #include <stack>
-
+#include <algorithm>
 // we will store all of the FakeGL context in a class object
 // this is similar to the real OpenGL which handles multiple windows
 // by having separate variables for each stored in separate graphics
@@ -64,6 +64,10 @@ const unsigned int FAKEGL_MODULATE = 1;
 const unsigned int FAKEGL_REPLACE = 2;
 
 // class with vertex attributes
+
+
+
+
 class vertexWithAttributes
     { // class vertexWithAttributes
     public:
@@ -257,7 +261,10 @@ class FakeGL
     //                                                 //
     //-------------------------------------------------//
 
-    // set the matrix mode (i.e. which one we change)   
+
+    auto reflect(const Cartesian3 & vec,const Cartesian3 & normal) -> Cartesian3;
+
+    // set the matrix mode (i.e. which one we change)
     void MatrixMode(unsigned int whichMatrix);
 
     // pushes a matrix on the stack
