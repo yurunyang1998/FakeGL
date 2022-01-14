@@ -74,7 +74,7 @@ void FakeGL::LineWidth(float width)
 //-------------------------------------------------//
 
 
-
+// this function is used to calculate the reflect angle of light between eyepositon
 auto FakeGL::reflect(const Cartesian3 & vec,const Cartesian3 & normal) -> Cartesian3
 {
     float dn = 2 * vec.dot(normal);
@@ -134,14 +134,14 @@ void FakeGL::MultMatrixf(const float *columnMajorCoordinates)
 //    memcpy(&mat.coordinates[0],columnMajorCoordinates,sizeof(float) * 16);
 //    mat = mat.transpose();
 
-    for(int i=0;i<16;i++){
+    for(int i=0;i<16;i++){      // convert the column major to a matrix
         int x = i%4;
         int y = i/4;
         mat[x][y] = columnMajorCoordinates[i];
     }
 
-    if(this->currentMatMode==FAKEGL_MODELVIEW){
-        this->modelViewMat =  this->modelViewMat *mat;
+    if(this->currentMatMode==FAKEGL_MODELVIEW){    // notice , generall we should multiple the mat on the left, but the opengl coordinate is inversed of
+        this->modelViewMat =  this->modelViewMat *mat; // our screen . If we multiply it on the left , we would get an inversed direction. So we put all matrixs on the right of the modelviewMat.
     }else if(this->currentMatMode == FAKEGL_PROJECTION){
         this->projectionMat = this->projectionMat * mat;
     }
@@ -345,6 +345,7 @@ void FakeGL::Vertex3f(float x, float y, float z)
         vertex.v = this->textureV;
         vertex.normal = this->normal;
 
+        //copy all material data from FakeGL to current vertex
         std::copy(std::begin(this->ambientMaterial), std::end(this->ambientMaterial), std::begin(vertex.ambientMaterial));
         std::copy(std::begin(this->emissionMaterial), std::end(this->emissionMaterial), std::begin(vertex.emissionMaterial));
         std::copy(std::begin(this->specularMaterial), std::end(this->specularMaterial), std::begin(vertex.specularMaterial));
@@ -507,8 +508,8 @@ void FakeGL::TransformVertex()
 
         // implement matrix
         Homogeneous4 hg4(vertex.position.x, vertex.position.y, vertex.position.z);
-        auto temp =  this->modelViewMat* hg4;
-        Homogeneous4 screenResult = this->projectionMat* temp;
+        auto wdcs =  this->modelViewMat* hg4;
+        Homogeneous4 screenResult = this->projectionMat* wdcs;
         Cartesian3 ndcs = screenResult.Point();
         Homogeneous4 ndcsHg4 = Homogeneous4(ndcs.x, ndcs.y, ndcs.z);
         screenResult = this->viewPortMat * ndcsHg4;
@@ -526,6 +527,7 @@ void FakeGL::TransformVertex()
             screenVertex.v = this->textureV;
         }
         if(this->enable_lighting){
+            // copy data from vertex to screenvertex
             std::copy(std::begin(vertex.ambientMaterial), std::end(vertex.ambientMaterial),
                       std::begin(screenVertex.ambientMaterial));
             std::copy(std::begin(vertex.diffuseMaterial), std::end(vertex.diffuseMaterial),
@@ -745,58 +747,6 @@ void FakeGL::RasteriseTriangle(screenVertexWithAttributes &vertex0, screenVertex
     // create a fragment for reuse
     fragmentWithAttributes rasterFragment;
 
-    int textureWidth = texture.width;
-    int textureHeight = texture.height;
-
-    float vertex0Light[3]={0,0,0}, vertex1Light[3]={0,0,0}, vertex2Light[3]={0,0,0};
-    Cartesian3 v0Normal(vertex0.normal.x, vertex0.normal.y, vertex0.normal.z);
-    Cartesian3 v1Normal(vertex1.normal.x, vertex1.normal.y, vertex1.normal.z);
-    Cartesian3 v2Normal(vertex2.normal.x, vertex2.normal.y, vertex2.normal.z);
-
-
-    Homogeneous4 eye{0,0,0,1};
-    auto eyeDir = this->modelViewMat * eye;
-    Cartesian3 eyeDir_(eyeDir.x, eyeDir.y, eyeDir.z);
-//    eyeDir_ = eyeDir_.unit();
-
-
-
-    v0Normal = v0Normal.unit();
-    v1Normal = v1Normal.unit();
-    v2Normal = v2Normal.unit();
-    Cartesian3 lightPosition(this->positionLight[0], this->positionLight[1], this->positionLight[2]);
-    lightPosition = lightPosition.unit();
-
-    auto v0reflectDir = reflect(lightPosition, v0Normal);
-    auto v1reflectDir = reflect(lightPosition, v1Normal);
-    auto v2reflectDir = reflect(lightPosition, v2Normal);
-
-
-
-    for(int i=0;i<3;i++){
-
-
-        auto v0ambient = ambietLight[i]*vertex0.ambientMaterial[i];
-        auto v1ambient = ambietLight[i]*vertex1.ambientMaterial[i];
-        auto v2ambient = ambietLight[i]*vertex2.ambientMaterial[i];
-
-        auto v0diffuse = diffuseLight[i]*vertex0.diffuseMaterial[i]* std::max(v0Normal.dot(lightPosition), 0.0f);
-        auto v1diffuse = diffuseLight[i]*vertex1.diffuseMaterial[i]* std::max(v1Normal.dot(lightPosition), 0.0f);
-        auto v2diffuse = diffuseLight[i]*vertex2.diffuseMaterial[i]* std::max(v2Normal.dot(lightPosition), 0.0f);
-
-        auto v0specular = specularLight[i]*vertex0.specularMaterial[i]*std::pow(std::max(v0reflectDir.dot(eyeDir_), 0.0f), this->shinessMaterial);
-        auto v1specular = specularLight[i]*vertex1.specularMaterial[i]*std::pow(std::max(v1reflectDir.dot(eyeDir_), 0.0f), this->shinessMaterial);
-        auto v2specular = specularLight[i]*vertex2.specularMaterial[i]*std::pow(std::max(v2reflectDir.dot(eyeDir_), 0.0f), this->shinessMaterial);
-
-        vertex0Light[i] += v0ambient + v0diffuse + v0specular+ this->emissionMaterial[i];
-
-        vertex1Light[i] += v1ambient + v1diffuse + v1specular+ this->emissionMaterial[i];
-
-        vertex2Light[i] += v2ambient + v2diffuse + v2specular + this->emissionMaterial[i];
-
-    }
-
-
 
 
 
@@ -829,85 +779,6 @@ void FakeGL::RasteriseTriangle(screenVertexWithAttributes &vertex0, screenVertex
 
 
             rasterFragment.colour = alpha * vertex0.colour + beta * vertex1.colour + gamma * vertex2.colour;
-
-            if(this->enable_depth_test){
-                if(depthTest(rasterFragment.row, rasterFragment.col,z*255)){
-                    // now we add it to the queue for fragment processing
-                }else
-                    continue;
-            }
-
-
-
-            if(this->enable_texture_2D){
-
-                int interpU = (alpha * vertex0.u + beta * vertex1.u + gamma * vertex2.u)* textureWidth;
-                int interpV = (alpha * vertex0.v + beta * vertex1.v + gamma * vertex2.v)* textureHeight;
-
-                if(this->textureMode == FAKEGL_REPLACE){
-                    rasterFragment.colour = this->texture[interpV][interpU];
-
-                }else if( this->textureMode == FAKEGL_MODULATE){
-                    rasterFragment.colour.modulate(this->texture[interpV][interpU]);
-            }
-          }
-
-            if(this->enable_lighting){
-
-               if(this->enable_phonh_shading){
-
-                   Cartesian3 interplNormal;
-                   interplNormal = alpha * v0Normal + beta*v1Normal + gamma*v2Normal;
-
-                   float interplAmbientMaterial[3];
-                   float interplDiffuseMaterial[3];
-                   float interplspecularMastrial[3];
-                   for(int i=0;i<3;i++){
-                       interplAmbientMaterial[i] = alpha*vertex0.ambientMaterial[i] + beta* vertex1.ambientMaterial[i] + gamma*vertex2.ambientMaterial[i];
-                       interplDiffuseMaterial[i] = alpha*vertex0.diffuseMaterial[i] + beta * vertex1.diffuseMaterial[i] + gamma*vertex2.diffuseMaterial[i];
-                       interplspecularMastrial[i] = alpha*vertex0.specularMaterial[i] + beta *vertex1.specularMaterial[i] + gamma*vertex2.specularMaterial[i];
-                   }
-
-                   auto lightReflect = reflect(lightPosition, interplNormal);
-
-                   rasterFragment.colour.red *= ambietLight[0]*interplAmbientMaterial[0] +
-                      diffuseLight[0]*interplspecularMastrial[0]*std::max(interplNormal.dot(lightPosition), 0.0f)+
-                      specularLight[0]*interplspecularMastrial[0]*std::pow(std::max(lightReflect.dot(eyeDir_), 0.0f), this->shinessMaterial)+
-                           this->emissionMaterial[0];
-
-                   rasterFragment.colour.green *=  ambietLight[1]*interplAmbientMaterial[1] +
-                      diffuseLight[1]*interplspecularMastrial[1]*std::max(interplNormal.dot(lightPosition), 0.0f)+
-                      specularLight[1]*interplspecularMastrial[1]*std::pow(std::max(lightReflect.dot(eyeDir_), 0.0f), this->shinessMaterial)+
-                           this->emissionMaterial[1];
-
-                   rasterFragment.colour.blue *=  ambietLight[2]*interplAmbientMaterial[2] +
-                      diffuseLight[2]*interplspecularMastrial[2]*std::max(interplNormal.dot(lightPosition), 0.0f)+
-                      specularLight[2]*interplspecularMastrial[2]*std::pow(std::max(lightReflect.dot(eyeDir_), 0.0f), this->shinessMaterial)+
-                           this->emissionMaterial[2];
-
-
-
-
-
-
-
-
-                }else{ //ground shading
-
-                    float red = (alpha*vertex0Light[0] + beta*vertex1Light[0] + gamma * vertex2Light[0]);
-                    float green = (alpha*vertex0Light[1] + beta*vertex1Light[1] + gamma * vertex2Light[1]);
-                    float blue = (alpha*vertex0Light[2] + beta*vertex1Light[2] + gamma * vertex2Light[2]);
-                    rasterFragment.colour.red *=red;
-                    rasterFragment.colour.green *=green;
-                    rasterFragment.colour.blue *= blue;
-                }
-            }
-
-
-
-
-
-
 
             fragmentQueue.push_back(rasterFragment);
 

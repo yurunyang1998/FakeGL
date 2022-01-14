@@ -1,3 +1,12 @@
+My method describe:
+
+The method that I adopted is Loop subdivision,  is divide vertexs to new vertexs and old vertexs.
+First , I updata these old vertexs ' position and save it.
+Then, I using some halfedge data structure to save those halfEdge's relationship, which save each's halfedge's pair, next, vertexs, etc.
+In each subdivision time, I generate some new vertexs by old vertexs and split each triangle face to 4 new smaller faces.
+and re-calculate new normal data for each new face.
+
+
 To compile on feng-linux / feng-gps:
 
 module add qt/5.13.0
